@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using FireSharp.Config;
 using FireSharp.Response;
+using Newtonsoft.Json;
 
 namespace FireSharp.Test.Console
 {
@@ -10,21 +12,46 @@ namespace FireSharp.Test.Console
         protected const string FirebaseSecret = "fubr9j2Kany9KU3SHCIHBLm142anWCzvlBs1D977";
         private static FirebaseClient _client;
 
+        #region JSON serializing / deserializing methods
+        private static JsonSerializerSettings JSON_SETTINGS = new JsonSerializerSettings
+        {
+            ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+            TypeNameHandling = TypeNameHandling.Auto,
+            Formatting = Formatting.Indented,
+            NullValueHandling = NullValueHandling.Ignore,
+            Converters = new List<JsonConverter>
+            {
+                new Newtonsoft.Json.Converters.StringEnumConverter(),
+            },
+        };
+        private static string ToJson(object payload)
+        {
+            return JsonConvert.SerializeObject(payload, JSON_SETTINGS);
+        }
+        private static object FromJson(string json)
+        {
+            return JsonConvert.DeserializeObject(json, JSON_SETTINGS);
+        }
+        #endregion
+
         private static void Main()
         {
             IFirebaseConfig config = new FirebaseConfig
             {
                 AuthSecret = FirebaseSecret,
-                BasePath = BasePath
+                BasePath = BasePath,
+                JsonSerializer = ToJson,
+                JsonDeserializer = FromJson,
             };
 
-            _client = new FirebaseClient(config); //Uses JsonNet default
+            _client = new FirebaseClient(config);
 
             EventStreaming();
             //Crud();
 
             System.Console.Read();
         }
+
 
         private static async void Crud()
         {

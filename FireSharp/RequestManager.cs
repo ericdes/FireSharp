@@ -83,7 +83,7 @@ namespace FireSharp
 
             if (payload != null)
             {
-                var json = _config.Serializer.Serialize(payload);
+                var json = _config.JsonSerializer(payload);
                 request.Content = new StringContent(json);
             }
 

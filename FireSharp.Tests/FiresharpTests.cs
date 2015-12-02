@@ -9,6 +9,7 @@ using FireSharp.Response;
 using FireSharp.Tests.Models;
 using FireSharp.Tests.NunitExtensions;
 using NUnit.Framework;
+using Newtonsoft.Json;
 
 namespace FireSharp.Tests
 {
@@ -19,13 +20,37 @@ namespace FireSharp.Tests
         protected const string FirebaseSecret = "fubr9j2Kany9KU3SHCIHBLm142anWCzvlBs1D977";
         private IFirebaseClient _client;
 
+        #region JSON serializing / deserializing methods
+        private static JsonSerializerSettings JSON_SETTINGS = new JsonSerializerSettings
+        {
+            ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+            TypeNameHandling = TypeNameHandling.Auto,
+            Formatting = Formatting.Indented,
+            NullValueHandling = NullValueHandling.Ignore,
+            Converters = new List<JsonConverter>
+            {
+                new Newtonsoft.Json.Converters.StringEnumConverter(),
+            },
+        };
+        private static string ToJson(object payload)
+        {
+            return JsonConvert.SerializeObject(payload, JSON_SETTINGS);
+        }
+        private static object FromJson(string json)
+        {
+            return JsonConvert.DeserializeObject(json, JSON_SETTINGS);
+        }
+        #endregion
+
         [TestFixtureSetUp]
         public async void TestFixtureSetUp()
         {
             IFirebaseConfig config = new FirebaseConfig
             {
                 AuthSecret = FirebaseSecret,
-                BasePath = BasePath
+                BasePath = BasePath,
+                JsonSerializer = ToJson,
+                JsonDeserializer = FromJson,
             };
             _client = new FirebaseClient(config); //Uses Newtonsoft.Json Json Serializer
 
