@@ -45,6 +45,7 @@
     <Compile Include="EventStreaming\SimpleCacheItem.cs" />
     <Compile Include="EventStreaming\TemporaryCache.cs" />
     <Compile Include="EventStreaming\ValueAddedEventArgs.cs" />
+    <Compile Include="EventStreaming\ValueMovedEventArgs.cs" />
     <Compile Include="EventStreaming\ValueChangedEventArgs.cs" />
     <Compile Include="EventStreaming\ValueRemovedEventArgs.cs" />
     <Compile Include="Exceptions\FirebaseException.cs" />

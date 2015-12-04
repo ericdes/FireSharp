@@ -271,9 +271,9 @@ namespace FireSharp
         }
 
         public async Task<EventStreamResponse> OnAsync(string path, ValueAddedEventHandler added = null, ValueChangedEventHandler changed = null,
-            ValueRemovedEventHandler removed = null)
+            ValueRemovedEventHandler removed = null, ValueMovedEventHandler moved = null)
         {
-            return new EventStreamResponse(await _requestManager.ListenAsync(path).ConfigureAwait(false), added, changed, removed);
+            return new EventStreamResponse(await _requestManager.ListenAsync(path).ConfigureAwait(false), added, changed, removed, moved);
         }
 
         private void HandleIfErrorResponse(HttpStatusCode statusCode, string content, Action<HttpStatusCode, string> errorHandler = null)

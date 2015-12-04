@@ -38,6 +38,7 @@ namespace FireSharp.Interfaces
         Task<EventStreamResponse> OnAsync(string path,
             ValueAddedEventHandler added = null,
             ValueChangedEventHandler changed = null,
-            ValueRemovedEventHandler removed = null);
+            ValueRemovedEventHandler removed = null,
+            ValueMovedEventHandler moved = null);
     }
 }

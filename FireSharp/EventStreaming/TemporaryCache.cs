@@ -192,8 +192,17 @@ namespace FireSharp.EventStreaming
             removed(this, args);
         }
 
+
+        private void OnMoved(ValueMovedEventArgs args)
+        {
+            var moved = Moved;
+            if (moved == null) return;
+            moved(this, args);
+        }
+
         public event ValueAddedEventHandler Added;
         public event ValueChangedEventHandler Changed;
         public event ValueRemovedEventHandler Removed;
+        public event ValueMovedEventHandler Moved;
     }
 }
