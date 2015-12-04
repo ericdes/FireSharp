@@ -7,18 +7,27 @@ namespace FireSharp.Interfaces
 {
     public interface IFirebaseClient
     {
+        ISerializer Serializer { get; }
+        FirebaseResponse Get(string path);
+        FirebaseResponse<T> Get<T>(string path);
         Task<FirebaseResponse> GetAsync(string path);
+        Task<FirebaseResponse<T>> GetAsync<T>(string path);
 
         Task<EventRootResponse<T>> OnChangeGetAsync<T>(string path, ValueRootAddedEventHandler<T> added = null);
-        Task<SetResponse> SetAsync<T>(string path, T data);
-        Task<PushResponse> PushAsync<T>(string path, T data);
-        Task<FirebaseResponse> DeleteAsync(string path);
-        Task<FirebaseResponse> UpdateAsync<T>(string path, T data);
-        FirebaseResponse Get(string path);
-        SetResponse Set<T>(string path, T data);
+
+        SetResponse<T> Set<T>(string path, T data);
+        Task<SetResponse<T>> SetAsync<T>(string path, T data);
+
+        PushResponse Push(string path, object data);
         PushResponse Push<T>(string path, T data);
+        Task<PushResponse> PushAsync(string path, object data);
+        Task<PushResponse> PushAsync<T>(string path, T data);
+
         FirebaseResponse Delete(string path);
-        FirebaseResponse Update<T>(string path, T data);
+        Task<FirebaseResponse> DeleteAsync(string path);
+
+        FirebaseResponse<T> Update<T>(string path, T data);
+        Task<FirebaseResponse<T>> UpdateAsync<T>(string path, T data);
 
         [Obsolete("This method is obsolete use OnAsync instead.")]
         Task<EventStreamResponse> ListenAsync(string path,

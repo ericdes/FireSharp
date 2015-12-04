@@ -1,23 +1,27 @@
 ﻿using System.Net;
 using System.Net.Http;
+using FireSharp.Interfaces;
 
 namespace FireSharp.Response
 {
-    public class PushResponse : FirebaseResponse
+    public class PushResponse : FirebaseResponse<PushResponse>
     {
-        public PushResponse(string body, HttpStatusCode statusCode, HttpResponseMessage httpResponse)
-            : base(body, statusCode, httpResponse)
+        public PushResponse(ISerializer serializer, string body, HttpStatusCode statusCode, HttpResponseMessage httpResponse)
+            : base(serializer, body, statusCode, httpResponse)
         {
         }
 
-        public PushResponse(string body, HttpStatusCode statusCode)
-            : base(body, statusCode)
+        public PushResponse(ISerializer serializer, string body, HttpStatusCode statusCode)
+            : base(serializer, body, statusCode)
         {
         }
 
-        public PushResult Result
+        public new PushResult Result
         {
-            get { return ResultAs<PushResult>(); }
+            get
+            {
+                return _serializer.Deserialize<PushResult>(this.Body);
+            }
         }
     }
 
@@ -25,4 +29,5 @@ namespace FireSharp.Response
     {
         public string Name { get; set; }
     }
+
 }

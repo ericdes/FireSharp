@@ -8,9 +8,9 @@ using FireSharp.Interfaces;
 
 namespace FireSharp
 {
-    internal class RequestManager : IRequestManager
+    public class RequestManager : IRequestManager
     {
-        internal static readonly HttpMethod Patch = new HttpMethod("PATCH");
+        public static readonly HttpMethod Patch = new HttpMethod("PATCH");
 
         private readonly IFirebaseConfig _config;
 
@@ -49,7 +49,22 @@ namespace FireSharp
             return response;
         }
 
-        public Task<HttpResponseMessage> RequestAsync(HttpMethod method, string path, object payload)
+        public Task<HttpResponseMessage> RequestAsync<T>(HttpMethod method, string path, T payload)
+        {
+            try
+            {
+                var request = PrepareRequest<T>(method, path, payload);
+
+                return GetClient().SendAsync(request, HttpCompletionOption.ResponseContentRead);
+            }
+            catch (Exception ex)
+            {
+                throw new FirebaseException(
+                    string.Format("An error occured while execute request. Path : {0} , Method : {1}", path, method), ex);
+            }
+        }
+
+        public Task<HttpResponseMessage> RequestAsync(HttpMethod method, string path, object payload = null)
         {
             try
             {
@@ -83,7 +98,22 @@ namespace FireSharp
 
             if (payload != null)
             {
-                var json = _config.JsonSerializer(payload);
+                var json = _config.Serializer.Serialize(payload);
+                request.Content = new StringContent(json);
+            }
+
+            return request;
+        }
+
+        private HttpRequestMessage PrepareRequest<T>(HttpMethod method, string path, T payload)
+        {
+            var uri = PrepareUri(path);
+
+            var request = new HttpRequestMessage(method, uri);
+
+            if (payload != null)
+            {
+                var json = _config.Serializer.Serialize<T>(payload);
                 request.Content = new StringContent(json);
             }
 

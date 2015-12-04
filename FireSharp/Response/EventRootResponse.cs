@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FireSharp.EventStreaming;
-using FireSharp.Extensions;
 using FireSharp.Interfaces;
 
 namespace FireSharp.Response
@@ -13,14 +12,16 @@ namespace FireSharp.Response
     public class EventRootResponse<T>
     {
         private readonly ValueRootAddedEventHandler<T> _added;
+        private readonly IFirebaseClient _firebaseClient;
         private readonly IRequestManager _requestManager;
         private readonly string _path;
         private readonly CancellationTokenSource _cancel;
         private readonly Task _pollingTask;
 
-        internal EventRootResponse(HttpResponseMessage httpResponse, ValueRootAddedEventHandler<T> added, IRequestManager requestManager, string path)
+        internal EventRootResponse(HttpResponseMessage httpResponse, ValueRootAddedEventHandler<T> added, IFirebaseClient firebaseClient, IRequestManager requestManager, string path)
         {
             _added = added;
+            _firebaseClient = firebaseClient;
             _requestManager = requestManager;
             _path = path;
 
@@ -60,7 +61,7 @@ namespace FireSharp.Response
                                     // Every change on child, will get entire object again.
                                     var request = await _requestManager.RequestAsync(HttpMethod.Get, _path);
                                     var jsonStr = await request.Content.ReadAsStringAsync().ConfigureAwait(false);
-                                    _added(this, jsonStr.ReadAs<T>());
+                                    _added(this, _firebaseClient.Serializer.Deserialize<T>(jsonStr));
                                 }
 
                                 // start over

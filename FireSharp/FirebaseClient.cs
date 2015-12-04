@@ -12,6 +12,7 @@ namespace FireSharp
 {
     public class FirebaseClient : IFirebaseClient, IDisposable
     {
+        public ISerializer Serializer { get; private set; }
         private readonly IRequestManager _requestManager;
 
         private readonly Action<HttpStatusCode, string> _defaultErrorHandler = (statusCode, body) =>
@@ -24,12 +25,18 @@ namespace FireSharp
 
 
         public FirebaseClient(IFirebaseConfig config)
-            : this(new RequestManager(config))
         {
+            this.Serializer = config.Serializer;
+            _requestManager = new RequestManager(config);
         }
 
-        internal FirebaseClient(IRequestManager requestManager)
+        /// <summary>
+        /// For testing purposes only (Mock)
+        /// </summary>
+        /// <param name="requestManager"></param>
+        public FirebaseClient(IRequestManager requestManager, IFirebaseConfig config)
         {
+            this.Serializer = config.Serializer;
             _requestManager = requestManager;
         }
 
@@ -45,7 +52,7 @@ namespace FireSharp
                 HttpResponseMessage response = _requestManager.RequestAsync(HttpMethod.Get, path).Result;
                 string content = response.Content.ReadAsStringAsync().Result;
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new FirebaseResponse(content, response.StatusCode);
+                return new FirebaseResponse(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -53,14 +60,30 @@ namespace FireSharp
             }
         }
 
-        public SetResponse Set<T>(string path, T data)
+        public FirebaseResponse<T> Get<T>(string path)
+        {
+            try
+            {
+                HttpResponseMessage response = _requestManager.RequestAsync(HttpMethod.Get, path).Result;
+                string content = response.Content.ReadAsStringAsync().Result;
+                HandleIfErrorResponse(response.StatusCode, content);
+                var firebaseresponse = new FirebaseResponse<T>(this.Serializer, content, response.StatusCode);
+                return firebaseresponse;
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
+
+        public SetResponse<T> Set<T>(string path, T data)
         {
             try
             {
                 HttpResponseMessage response = _requestManager.RequestAsync(HttpMethod.Put, path, data).Result;
                 string content = response.Content.ReadAsStringAsync().Result;
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new SetResponse(content, response.StatusCode);
+                return new SetResponse<T>(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -72,10 +95,24 @@ namespace FireSharp
         {
             try
             {
+                HttpResponseMessage response = _requestManager.RequestAsync<T>(HttpMethod.Post, path, data).Result;
+                string content = response.Content.ReadAsStringAsync().Result;
+                HandleIfErrorResponse(response.StatusCode, content);
+                return new PushResponse(this.Serializer, content, response.StatusCode);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
+        public PushResponse Push(string path, object data)
+        {
+            try
+            {
                 HttpResponseMessage response = _requestManager.RequestAsync(HttpMethod.Post, path, data).Result;
                 string content = response.Content.ReadAsStringAsync().Result;
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new PushResponse(content, response.StatusCode);
+                return new PushResponse(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -90,7 +127,7 @@ namespace FireSharp
                 HttpResponseMessage response = _requestManager.RequestAsync(HttpMethod.Delete, path).Result;
                 string content = response.Content.ReadAsStringAsync().Result;
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new FirebaseResponse(content, response.StatusCode);
+                return new FirebaseResponse(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -98,14 +135,14 @@ namespace FireSharp
             }
         }
 
-        public FirebaseResponse Update<T>(string path, T data)
+        public FirebaseResponse<T> Update<T>(string path, T data)
         {
             try
             {
                 HttpResponseMessage response = _requestManager.RequestAsync(RequestManager.Patch, path, data).Result;
                 string content = response.Content.ReadAsStringAsync().Result;
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new FirebaseResponse(content, response.StatusCode);
+                return new FirebaseResponse<T>(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -120,7 +157,7 @@ namespace FireSharp
                 HttpResponseMessage response = await _requestManager.RequestAsync(HttpMethod.Get, path).ConfigureAwait(false);
                 string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new FirebaseResponse(content, response.StatusCode);
+                return new FirebaseResponse(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -128,14 +165,30 @@ namespace FireSharp
             }
         }
 
-        public async Task<SetResponse> SetAsync<T>(string path, T data)
+
+        public async Task<FirebaseResponse<T>> GetAsync<T>(string path)
+        {
+            try
+            {
+                HttpResponseMessage response = await _requestManager.RequestAsync(HttpMethod.Get, path).ConfigureAwait(false);
+                string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                HandleIfErrorResponse(response.StatusCode, content);
+                return new FirebaseResponse<T>(this.Serializer, content, response.StatusCode);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
+
+        public async Task<SetResponse<T>> SetAsync<T>(string path, T data)
         {
             try
             {
                 HttpResponseMessage response = await _requestManager.RequestAsync(HttpMethod.Put, path, data).ConfigureAwait(false);
                 string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new SetResponse(content, response.StatusCode);
+                return new SetResponse<T>(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -147,10 +200,26 @@ namespace FireSharp
         {
             try
             {
+                HttpResponseMessage response = await _requestManager.RequestAsync<T>(HttpMethod.Post, path, data).ConfigureAwait(false);
+                string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                HandleIfErrorResponse(response.StatusCode, content);
+                return new PushResponse(this.Serializer, content, response.StatusCode);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
+
+
+        public async Task<PushResponse> PushAsync(string path, object data)
+        {
+            try
+            {
                 HttpResponseMessage response = await _requestManager.RequestAsync(HttpMethod.Post, path, data).ConfigureAwait(false);
                 string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new PushResponse(content, response.StatusCode);
+                return new PushResponse(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -165,7 +234,7 @@ namespace FireSharp
                 HttpResponseMessage response = await _requestManager.RequestAsync(HttpMethod.Delete, path).ConfigureAwait(false);
                 string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new FirebaseResponse(content, response.StatusCode);
+                return new FirebaseResponse(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -173,14 +242,14 @@ namespace FireSharp
             }
         }
 
-        public async Task<FirebaseResponse> UpdateAsync<T>(string path, T data)
+        public async Task<FirebaseResponse<T>> UpdateAsync<T>(string path, T data)
         {
             try
             {
                 HttpResponseMessage response = await _requestManager.RequestAsync(RequestManager.Patch, path, data).ConfigureAwait(false);
                 string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new FirebaseResponse(content, response.StatusCode);
+                return new FirebaseResponse<T>(this.Serializer, content, response.StatusCode);
             }
             catch (HttpRequestException ex)
             {
@@ -198,7 +267,7 @@ namespace FireSharp
 
         public async Task<EventRootResponse<T>> OnChangeGetAsync<T>(string path, ValueRootAddedEventHandler<T> added = null)
         {
-            return new EventRootResponse<T>(await _requestManager.ListenAsync(path).ConfigureAwait(false), added, _requestManager, path);
+            return new EventRootResponse<T>(await _requestManager.ListenAsync(path).ConfigureAwait(false), added, this, _requestManager, path);
         }
 
         public async Task<EventStreamResponse> OnAsync(string path, ValueAddedEventHandler added = null, ValueChangedEventHandler changed = null,
