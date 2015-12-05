@@ -265,9 +265,9 @@ namespace FireSharp
             return new EventStreamResponse(await _requestManager.ListenAsync(path).ConfigureAwait(false), added, changed, removed);
         }
 
-        public async Task<EventRootResponse<T>> OnChangeGetAsync<T>(string path, ValueRootAddedEventHandler<T> added = null)
+        public async Task<EventRootResponse<T>> OnChangeGetAsync<T>(string path, ValueChangedEventHandler<T> changed)
         {
-            return new EventRootResponse<T>(await _requestManager.ListenAsync(path).ConfigureAwait(false), added, this, _requestManager, path);
+            return new EventRootResponse<T>(await _requestManager.ListenAsync(path).ConfigureAwait(false), changed, this, _requestManager, path);
         }
 
         public async Task<EventStreamResponse> OnAsync(string path, ValueAddedEventHandler added = null, ValueChangedEventHandler changed = null,

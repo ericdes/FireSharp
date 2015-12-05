@@ -2,14 +2,45 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using FireSharp.Exceptions;
-using FireSharp.Extensions;
 using FireSharp.Interfaces;
 using FireSharp.Tests.Models;
 using Moq;
 using NUnit.Framework;
+using Newtonsoft.Json;
+using System.Collections.Generic;
+using FireSharp.Config;
 
 namespace FireSharp.Tests
 {
+    public class Serializer : ISerializer
+    {
+        private static JsonSerializerSettings JSON_SETTINGS = new JsonSerializerSettings
+        {
+            ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+            TypeNameHandling = TypeNameHandling.Auto,
+            Formatting = Formatting.Indented,
+            NullValueHandling = NullValueHandling.Ignore,
+            Converters = new List<JsonConverter>
+            {
+                new Newtonsoft.Json.Converters.StringEnumConverter(),
+            },
+        };
+        public T Deserialize<T>(string json)
+        {
+            return JsonConvert.DeserializeObject<T>(json, JSON_SETTINGS);
+        }
+
+        public string Serialize(object value)
+        {
+            return JsonConvert.SerializeObject(value, JSON_SETTINGS);
+        }
+
+        public string Serialize<T>(T value)
+        {
+            return JsonConvert.SerializeObject(value, typeof(T), JSON_SETTINGS);
+        }
+    }
+
     public class FirebaseClientTests : TestBase
     {
         private Todo _expected;
@@ -20,6 +51,11 @@ namespace FireSharp.Tests
 
         protected override void FinalizeSetUp()
         {
+            IFirebaseConfig config = new FirebaseConfig
+            {
+                Serializer = new Serializer(),
+            };
+
             _expected = new Todo
             {
                 name = "Do your homework!",
@@ -27,10 +63,11 @@ namespace FireSharp.Tests
             };
 
             _firebaseRequestManagerMock = MockFor<IRequestManager>();
+            _firebaseClient = new FirebaseClient(_firebaseRequestManagerMock.Object, config);
 
             _expectedResponse = new HttpResponseMessage
             {
-                Content = new StringContent(_expected.ToJson()),
+                Content = new StringContent(_firebaseClient.Serializer.Serialize(_expected)),
                 StatusCode = HttpStatusCode.OK
             };
             _failureResponse = new HttpResponseMessage {
@@ -38,7 +75,6 @@ namespace FireSharp.Tests
                 StatusCode = HttpStatusCode.InternalServerError
             };
 
-            _firebaseClient = new FirebaseClient(_firebaseRequestManagerMock.Object);
         }
 
         [Test]
@@ -50,7 +86,7 @@ namespace FireSharp.Tests
 
             var response = await _firebaseClient.PushAsync("todos", _expected);
             Assert.NotNull(response);
-            Assert.AreEqual(response.Body, _expected.ToJson());
+            Assert.AreEqual(response.Body, _firebaseClient.Serializer.Serialize(_expected));
         }
 
         [Test]
@@ -72,7 +108,7 @@ namespace FireSharp.Tests
 
             var response = await _firebaseClient.SetAsync("todos", _expected);
             Assert.NotNull(response);
-            Assert.AreEqual(response.Body, _expected.ToJson());
+            Assert.AreEqual(response.Body, _firebaseClient.Serializer.Serialize(_expected));
         }
 
         [Test]
@@ -94,7 +130,7 @@ namespace FireSharp.Tests
 
             var firebaseResponse = await _firebaseClient.GetAsync("todos");
             Assert.NotNull(firebaseResponse);
-            Assert.AreEqual(firebaseResponse.Body, _expected.ToJson());
+            Assert.AreEqual(firebaseResponse.Body, _firebaseClient.Serializer.Serialize(_expected));
         }
 
         [Test]
@@ -147,7 +183,7 @@ namespace FireSharp.Tests
 
             var response = await _firebaseClient.UpdateAsync("todos", _expected);
             Assert.NotNull(response);
-            Assert.AreEqual(response.Body, _expected.ToJson());
+            Assert.AreEqual(response.Body, _firebaseClient.Serializer.Serialize(_expected));
         }
 
         [Test]

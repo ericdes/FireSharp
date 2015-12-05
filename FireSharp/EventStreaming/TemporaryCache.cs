@@ -13,6 +13,14 @@ namespace FireSharp.EventStreaming
         private readonly SimpleCacheItem _tree = new SimpleCacheItem();
         private readonly object _treeLock = new object();
 
+        #region Events
+        public event ValueAddedEventHandler Added;
+        public event ValueChangedEventHandler Changed;
+        public event ValueRemovedEventHandler Removed;
+        public event ValueMovedEventHandler Moved;
+        #endregion
+
+
         public TemporaryCache()
         {
             _tree.Name = string.Empty;
@@ -44,6 +52,7 @@ namespace FireSharp.EventStreaming
             }
         }
 
+        #region ----- Private methods
         private SimpleCacheItem FindRoot(string path)
         {
             var segments = path.Split(_seperator, StringSplitOptions.RemoveEmptyEntries);
@@ -104,16 +113,31 @@ namespace FireSharp.EventStreaming
                         {
                             var oldData = root.Value;
                             root.Value = reader.Value.ToString();
-                            OnUpdated(new ValueChangedEventArgs(PathFromRoot(root), root.Value, oldData));
+                            OnChanged(new ValueChangedEventArgs(PathFromRoot(root), root.Value, oldData));
                         }
 
                         return;
                     case JsonToken.Null:
-                        DeleteChild(root);
+                        DeleteRootOrChildren(root);
                         return;
                 }
             }
         }
+
+        private void DeleteRootOrChildren(SimpleCacheItem root)
+        {
+            if (root.Parent == null && root.Children.Count == 0)
+            {
+                // We don't have other choices than removing root
+                root = null;
+                OnRemoved(new ValueRemovedEventArgs("/"));
+            }
+            else
+            {
+                DeleteChild(root);
+            }
+        }
+
 
         private void DeleteChild(SimpleCacheItem root)
         {
@@ -171,38 +195,34 @@ namespace FireSharp.EventStreaming
             return sb.ToString();
         }
 
+        #region Methods to raise events
         private void OnAdded(ValueAddedEventArgs args)
         {
-            var added = Added;
-            if (added == null) return;
-            added(this, args);
+            if (this.Added == null) return; // Not watching 'added' events
+            this.Added(this, args);
         }
 
-        private void OnUpdated(ValueChangedEventArgs args)
+        private void OnChanged(ValueChangedEventArgs args)
         {
-            var updated = Changed;
-            if (updated == null) return;
-            updated(this, args);
+            if (this.Changed == null) return; // Not watching 'changed' events
+            this.Changed(this, args);
         }
 
         private void OnRemoved(ValueRemovedEventArgs args)
         {
-            var removed = Removed;
-            if (removed == null) return;
-            removed(this, args);
+            if (this.Removed == null) return; // Not watching 'removed' events
+            this.Removed(this, args);
         }
 
 
         private void OnMoved(ValueMovedEventArgs args)
         {
-            var moved = Moved;
-            if (moved == null) return;
-            moved(this, args);
+            if (this.Moved == null) return; // Not watching 'moved' events
+            this.Moved(this, args);
         }
+        #endregion
 
-        public event ValueAddedEventHandler Added;
-        public event ValueChangedEventHandler Changed;
-        public event ValueRemovedEventHandler Removed;
-        public event ValueMovedEventHandler Moved;
+        #endregion
+
     }
 }

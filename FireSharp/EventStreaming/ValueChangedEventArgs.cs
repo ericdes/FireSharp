@@ -15,4 +15,5 @@ namespace FireSharp.EventStreaming
         public string Data { get; private set; }
         public string OldData { get; private set; }
     }
+
 }

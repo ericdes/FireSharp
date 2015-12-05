@@ -11,16 +11,16 @@ namespace FireSharp.Response
 {
     public class EventRootResponse<T>
     {
-        private readonly ValueRootAddedEventHandler<T> _added;
+        private readonly ValueChangedEventHandler<T> _changed;
         private readonly IFirebaseClient _firebaseClient;
         private readonly IRequestManager _requestManager;
         private readonly string _path;
         private readonly CancellationTokenSource _cancel;
         private readonly Task _pollingTask;
 
-        internal EventRootResponse(HttpResponseMessage httpResponse, ValueRootAddedEventHandler<T> added, IFirebaseClient firebaseClient, IRequestManager requestManager, string path)
+        internal EventRootResponse(HttpResponseMessage httpResponse, ValueChangedEventHandler<T> changed, IFirebaseClient firebaseClient, IRequestManager requestManager, string path)
         {
-            _added = added;
+            _changed = changed;
             _firebaseClient = firebaseClient;
             _requestManager = requestManager;
             _path = path;
@@ -45,7 +45,7 @@ namespace FireSharp.Response
                             {
                                 _cancel.Token.ThrowIfCancellationRequested();
                                 var read = await sr.ReadLineAsync().ConfigureAwait(false);
-                                Debug.WriteLine(read);
+                                Debug.WriteLine("[HttpResponse.Content] " + read);
                                 if (read.StartsWith("event: "))
                                 {
                                     eventName = read.Substring(7);
@@ -61,7 +61,7 @@ namespace FireSharp.Response
                                     // Every change on child, will get entire object again.
                                     var request = await _requestManager.RequestAsync(HttpMethod.Get, _path);
                                     var jsonStr = await request.Content.ReadAsStringAsync().ConfigureAwait(false);
-                                    _added(this, _firebaseClient.Serializer.Deserialize<T>(jsonStr));
+                                    _changed(this, _firebaseClient.Serializer.Deserialize<T>(jsonStr));
                                 }
 
                                 // start over

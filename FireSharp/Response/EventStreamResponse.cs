@@ -61,7 +61,7 @@ namespace FireSharp.Response
                             {
                                 _cancel.Token.ThrowIfCancellationRequested();
                                 var read = await sr.ReadLineAsync();
-                                Debug.WriteLine(read);
+                                Debug.WriteLine("[StreamingResponse.Content] " + read);
                                 if (read.StartsWith("event: "))
                                 {
                                     eventName = read.Substring(7);

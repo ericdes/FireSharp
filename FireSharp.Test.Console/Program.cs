@@ -40,8 +40,6 @@ namespace FireSharp.Test.Console
             {
                 AuthSecret = FirebaseSecret,
                 BasePath = BasePath,
-                JsonSerializer = ToJson,
-                JsonDeserializer = FromJson,
             };
 
             _client = new FirebaseClient(config);

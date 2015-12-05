@@ -13,7 +13,7 @@ namespace FireSharp.Interfaces
         Task<FirebaseResponse> GetAsync(string path);
         Task<FirebaseResponse<T>> GetAsync<T>(string path);
 
-        Task<EventRootResponse<T>> OnChangeGetAsync<T>(string path, ValueRootAddedEventHandler<T> added = null);
+        Task<EventRootResponse<T>> OnChangeGetAsync<T>(string path, ValueChangedEventHandler<T> added = null);
 
         SetResponse<T> Set<T>(string path, T data);
         Task<SetResponse<T>> SetAsync<T>(string path, T data);

@@ -20,27 +20,35 @@ namespace FireSharp.Tests
         protected const string FirebaseSecret = "fubr9j2Kany9KU3SHCIHBLm142anWCzvlBs1D977";
         private IFirebaseClient _client;
 
-        #region JSON serializing / deserializing methods
-        private static JsonSerializerSettings JSON_SETTINGS = new JsonSerializerSettings
+        public class Serializer : ISerializer
         {
-            ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-            TypeNameHandling = TypeNameHandling.Auto,
-            Formatting = Formatting.Indented,
-            NullValueHandling = NullValueHandling.Ignore,
-            Converters = new List<JsonConverter>
+            private static JsonSerializerSettings JSON_SETTINGS = new JsonSerializerSettings
+            {
+                ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                TypeNameHandling = TypeNameHandling.Auto,
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore,
+                Converters = new List<JsonConverter>
             {
                 new Newtonsoft.Json.Converters.StringEnumConverter(),
             },
-        };
-        private static string ToJson(object payload)
-        {
-            return JsonConvert.SerializeObject(payload, JSON_SETTINGS);
+            };
+            public T Deserialize<T>(string json)
+            {
+                return JsonConvert.DeserializeObject<T>(json, JSON_SETTINGS);
+            }
+
+            public string Serialize(object value)
+            {
+                return JsonConvert.SerializeObject(value, JSON_SETTINGS);
+            }
+
+
+            public string Serialize<T>(T value)
+            {
+                return JsonConvert.SerializeObject(value, typeof(T), JSON_SETTINGS);
+            }
         }
-        private static object FromJson(string json)
-        {
-            return JsonConvert.DeserializeObject(json, JSON_SETTINGS);
-        }
-        #endregion
 
         [TestFixtureSetUp]
         public async void TestFixtureSetUp()
@@ -49,8 +57,7 @@ namespace FireSharp.Tests
             {
                 AuthSecret = FirebaseSecret,
                 BasePath = BasePath,
-                JsonSerializer = ToJson,
-                JsonDeserializer = FromJson,
+                Serializer = new Serializer(),
             };
             _client = new FirebaseClient(config); //Uses Newtonsoft.Json Json Serializer
 
@@ -87,14 +94,14 @@ namespace FireSharp.Tests
                 priority = 2
             };
             var response = await _client.SetAsync("todos/setAsync", todo);
-            var result = response.ResultAs<Todo>();
+            var result = _client.Serializer.Deserialize<Todo>(response.Body);
             Assert.NotNull(response);
             Assert.AreEqual(todo.name, result.name);
 
             // overwrite the todo we just set
             response = await _client.SetAsync("todos", todo);
             var getResponse = await _client.GetAsync("/todos/setAsync");
-            result = getResponse.ResultAs<Todo>();
+            result = _client.Serializer.Deserialize<Todo>(getResponse.Body);
             Assert.Null(result);
         }
 
@@ -147,7 +154,7 @@ namespace FireSharp.Tests
 
             var response = await _client.UpdateAsync("todos/set/setAsync", todoToUpdate);
             Assert.NotNull(response);
-            var actual = response.ResultAs<Todo>();
+            var actual = response.Result;
             Assert.AreEqual(todoToUpdate.name, actual.name);
             Assert.AreEqual(todoToUpdate.priority, actual.priority);
         }
@@ -178,9 +185,9 @@ namespace FireSharp.Tests
 
             Thread.Sleep(400);
 
-            var getResponse = await _client.GetAsync(string.Format("todos/list/pushAsync/{0}", id));
+            var getResponse = await _client.GetAsync<List<Todo>>(string.Format("todos/list/pushAsync/{0}", id));
 
-            List<Todo> actual = getResponse.ResultAs<List<Todo>>();
+            List<Todo> actual = getResponse.Result;
 
             Assert.NotNull(pushResponse);
             Assert.NotNull(getResponse);
@@ -209,15 +216,15 @@ namespace FireSharp.Tests
                 name = "Execute SET",
                 priority = 2
             };
-            var response = _client.Set("todos/set", todo);
-            var result = response.ResultAs<Todo>();
+            var response = _client.Set<Todo>("todos/set", todo);
+            var result = response.Result;
             Assert.NotNull(response);
             Assert.AreEqual(todo.name, result.name);
 
             // overwrite the todo we just set
             response = _client.Set("todos", todo);
-            var getResponse = _client.Get("/todos/set");
-            result = getResponse.ResultAs<Todo>();
+            var getResponse = _client.Get<Todo>("/todos/set");
+            result = getResponse.Result;
             Assert.Null(result);
         }
 
@@ -269,9 +276,9 @@ namespace FireSharp.Tests
                 priority = 1
             };
 
-            var response = _client.Update("todos/updatetest/set", todoToUpdate);
+            var response = _client.Update<Todo>("todos/updatetest/set", todoToUpdate);
             Assert.NotNull(response);
-            var actual = response.ResultAs<Todo>();
+            var actual = response.Result;
             Assert.AreEqual(todoToUpdate.name, actual.name);
             Assert.AreEqual(todoToUpdate.priority, actual.priority);
         }
