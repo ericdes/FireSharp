@@ -26,4 +26,19 @@ namespace FireSharp.Exceptions
 
         }
     }
+
+    public class FirebaseEventStreamingException : FirebaseException
+    {
+        public string EventName { get; private set; }
+        public string FirebaseData { get; private set; }
+
+        public FirebaseEventStreamingException(string eventName, string firebaseData, string message)
+            : base(message)
+        {
+            this.EventName = eventName;
+            this.FirebaseData = firebaseData;
+        }
+
+    }
+
 }

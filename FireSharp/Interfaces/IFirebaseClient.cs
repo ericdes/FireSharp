@@ -8,6 +8,8 @@ namespace FireSharp.Interfaces
     public interface IFirebaseClient
     {
         ISerializer Serializer { get; }
+        JsonPatchManager JsonPatchManager { get; }
+        
         FirebaseResponse Get(string path);
         FirebaseResponse<T> Get<T>(string path);
         Task<FirebaseResponse> GetAsync(string path);
@@ -29,16 +31,12 @@ namespace FireSharp.Interfaces
         FirebaseResponse<T> Update<T>(string path, T data);
         Task<FirebaseResponse<T>> UpdateAsync<T>(string path, T data);
 
-        [Obsolete("This method is obsolete use OnAsync instead.")]
-        Task<EventStreamResponse> ListenAsync(string path,
-            ValueAddedEventHandler added = null,
-            ValueChangedEventHandler changed = null,
-            ValueRemovedEventHandler removed = null);
+        Task<EventStreamResponse<T>> OnAsync<T>(string path,
+            ObjectCreatedEventHandler<T> objectCreated = null,
+            ObjectPatchedEventHandler<T> objectPatched = null,
+            EventStreamingResponseEventHandler<T> eventStreamingResponse = null,
+            EventStreamingResponseRawEventHandler<T> eventStreamingResponseRaw = null,
+            EventStreamingEventHandler<T> eventStreaming = null);
 
-        Task<EventStreamResponse> OnAsync(string path,
-            ValueAddedEventHandler added = null,
-            ValueChangedEventHandler changed = null,
-            ValueRemovedEventHandler removed = null,
-            ValueMovedEventHandler moved = null);
     }
 }

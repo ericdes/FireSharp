@@ -5,9 +5,9 @@ namespace FireSharp.Config
 {
     public interface IFirebaseConfig
     {
-        string BasePath { get; set; }
-        string AuthSecret { get; set; }
-        TimeSpan? RequestTimeout { get; set; }
-        ISerializer Serializer { get; set; }
+        string BasePath { get; }
+        string AuthSecret { get; }
+        TimeSpan? RequestTimeout { get; }
+        ISerializer Serializer { get; }
     }
 }

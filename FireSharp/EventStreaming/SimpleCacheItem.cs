@@ -14,5 +14,10 @@ namespace FireSharp.EventStreaming
         {
             get { return _children ?? (_children = new List<SimpleCacheItem>()); }
         }
+
+        public override string ToString()
+        {
+            return string.Format("[{0}] {1}", this.Name, this.Value);
+        }
     }
 }

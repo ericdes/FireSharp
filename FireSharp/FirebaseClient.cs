@@ -10,9 +10,10 @@ using FireSharp.Response;
 
 namespace FireSharp
 {
-    public class FirebaseClient : IFirebaseClient, IDisposable
+    public partial class FirebaseClient : IFirebaseClient, IDisposable
     {
         public ISerializer Serializer { get; private set; }
+        public JsonPatchManager JsonPatchManager { get; private set; }
         private readonly IRequestManager _requestManager;
 
         private readonly Action<HttpStatusCode, string> _defaultErrorHandler = (statusCode, body) =>
@@ -27,6 +28,7 @@ namespace FireSharp
         public FirebaseClient(IFirebaseConfig config)
         {
             this.Serializer = config.Serializer;
+            this.JsonPatchManager = new JsonPatchManager(this.Serializer);
             _requestManager = new RequestManager(config);
         }
 
@@ -135,6 +137,13 @@ namespace FireSharp
             }
         }
 
+        /// <summary>
+        /// Sends an update request to Firebase
+        /// </summary>
+        /// <typeparam name="T">The type of the object to update</typeparam>
+        /// <param name="path">The Firebase path to the object to update.</param>
+        /// <param name="data">The patch to apply to the object.</param>
+        /// <returns></returns>
         public FirebaseResponse<T> Update<T>(string path, T data)
         {
             try
@@ -257,23 +266,26 @@ namespace FireSharp
             }
         }
 
-        [Obsolete("This method is obsolete use OnAsync instead.")]
-        public async Task<EventStreamResponse> ListenAsync(string path, ValueAddedEventHandler added = null,
-            ValueChangedEventHandler changed = null,
-            ValueRemovedEventHandler removed = null)
-        {
-            return new EventStreamResponse(await _requestManager.ListenAsync(path).ConfigureAwait(false), added, changed, removed);
-        }
-
         public async Task<EventRootResponse<T>> OnChangeGetAsync<T>(string path, ValueChangedEventHandler<T> changed)
         {
             return new EventRootResponse<T>(await _requestManager.ListenAsync(path).ConfigureAwait(false), changed, this, _requestManager, path);
         }
 
-        public async Task<EventStreamResponse> OnAsync(string path, ValueAddedEventHandler added = null, ValueChangedEventHandler changed = null,
-            ValueRemovedEventHandler removed = null, ValueMovedEventHandler moved = null)
+
+        public async Task<EventStreamResponse<T>> OnAsync<T>(string path,
+            ObjectCreatedEventHandler<T> objectCreated = null,
+            ObjectPatchedEventHandler<T> objectPatched = null,
+            EventStreamingResponseEventHandler<T> eventStreamingResponse = null,
+            EventStreamingResponseRawEventHandler<T> eventStreamingResponseRaw = null,
+            EventStreamingEventHandler<T> eventStreaming = null)
         {
-            return new EventStreamResponse(await _requestManager.ListenAsync(path).ConfigureAwait(false), added, changed, removed, moved);
+            return new EventStreamResponse<T>(this.Serializer,
+                await _requestManager.ListenAsync(path).ConfigureAwait(false), 
+                objectCreated,
+                objectPatched,
+                eventStreamingResponse, 
+                eventStreamingResponseRaw, 
+                eventStreaming);
         }
 
         private void HandleIfErrorResponse(HttpStatusCode statusCode, string content, Action<HttpStatusCode, string> errorHandler = null)

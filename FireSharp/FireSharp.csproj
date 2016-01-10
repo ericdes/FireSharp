@@ -44,15 +44,24 @@
     <Compile Include="EventStreaming\Delegates.cs" />
     <Compile Include="EventStreaming\SimpleCacheItem.cs" />
     <Compile Include="EventStreaming\TemporaryCache.cs" />
+    <Compile Include="EventStreaming\FireCache.cs" />
+    <Compile Include="EventStreaming\EventStreamingEventArgs.cs" />
     <Compile Include="EventStreaming\ValueAddedEventArgs.cs" />
     <Compile Include="EventStreaming\ValueMovedEventArgs.cs" />
     <Compile Include="EventStreaming\ValueChangedEventArgs.cs" />
     <Compile Include="EventStreaming\ValueRemovedEventArgs.cs" />
     <Compile Include="Exceptions\FirebaseException.cs" />
     <Compile Include="FirebaseClient.cs" />
+    <Compile Include="Interfaces\IEventStreamResponse.cs" />
+    <Compile Include="Interfaces\IJsonPatch.cs" />
     <Compile Include="Interfaces\IFirebaseClient.cs" />
+    <Compile Include="Interfaces\IJsonPatchManager.cs" />
     <Compile Include="Interfaces\IRequestManager.cs" />
     <Compile Include="Interfaces\ISerializer.cs" />
+    <Compile Include="Patching\JsonPatchManager.cs" />
+    <Compile Include="Patching\JsonPatch.cs" />
+    <Compile Include="Patching\Patch.cs" />
+    <Compile Include="Patching\PathedObjectInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RequestManager.cs" />
     <Compile Include="Response\EventRootResponse.cs" />
@@ -61,7 +70,6 @@
     <Compile Include="Response\PushResponse.cs" />
     <Compile Include="Response\SetResponse.cs" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

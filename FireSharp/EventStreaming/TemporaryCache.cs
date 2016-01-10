@@ -13,6 +13,7 @@ namespace FireSharp.EventStreaming
         private readonly SimpleCacheItem _tree = new SimpleCacheItem();
         private readonly object _treeLock = new object();
 
+
         #region Events
         public event ValueAddedEventHandler Added;
         public event ValueChangedEventHandler Changed;
@@ -95,7 +96,9 @@ namespace FireSharp.EventStreaming
                 switch (reader.TokenType)
                 {
                     case JsonToken.PropertyName:
-                        UpdateChildren(GetNamedChild(root, reader.Value.ToString()), reader);
+                        var segment = reader.Value.ToString();
+                        var child = GetNamedChild(root, segment);
+                        UpdateChildren(child, reader); // Re-entrant, child become new cached root.
                         break;
                     case JsonToken.Boolean:
                     case JsonToken.Bytes:
@@ -106,14 +109,16 @@ namespace FireSharp.EventStreaming
                         if (root.Created)
                         {
                             root.Value = reader.Value.ToString();
-                            OnAdded(new ValueAddedEventArgs(PathFromRoot(root), reader.Value.ToString()));
+                            var rootPath = PathFromRoot(root);
+                            OnAdded(new ValueAddedEventArgs(rootPath, root.Value));
                             root.Created = false;
                         }
                         else
                         {
                             var oldData = root.Value;
                             root.Value = reader.Value.ToString();
-                            OnChanged(new ValueChangedEventArgs(PathFromRoot(root), root.Value, oldData));
+                            var rootPath = PathFromRoot(root);
+                            OnChanged(new ValueChangedEventArgs(rootPath, root.Value, oldData));
                         }
 
                         return;

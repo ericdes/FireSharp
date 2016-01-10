@@ -58,10 +58,17 @@ namespace FireSharp.Response
                                     {
                                         throw new InvalidOperationException("Payload data was received but an event did not preceed it.");
                                     }
-                                    // Every change on child, will get entire object again.
-                                    var request = await _requestManager.RequestAsync(HttpMethod.Get, _path);
-                                    var jsonStr = await request.Content.ReadAsStringAsync().ConfigureAwait(false);
-                                    _changed(this, _firebaseClient.Serializer.Deserialize<T>(jsonStr));
+                                    switch (eventName)
+                                    {
+                                        case "put":
+                                        case "patch":
+                                            // Every change on child, will get entire object again.
+                                            var request = await _requestManager.RequestAsync(HttpMethod.Get, _path);
+                                            var jsonStr = await request.Content.ReadAsStringAsync().ConfigureAwait(false);
+                                            var data = _firebaseClient.Serializer.Deserialize<T>(jsonStr);
+                                            _changed(this, data);
+                                            break;
+                                    }
                                 }
 
                                 // start over
@@ -78,6 +85,7 @@ namespace FireSharp.Response
         {
             _cancel.Cancel();
         }
+
 
         public void Dispose()
         {
