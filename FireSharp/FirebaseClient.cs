@@ -25,6 +25,7 @@ namespace FireSharp
         };
 
 
+
         public FirebaseClient(IFirebaseConfig config)
         {
             this.Serializer = config.Serializer;
@@ -47,6 +48,9 @@ namespace FireSharp
             using (_requestManager) { }
         }
 
+
+
+
         public FirebaseResponse Get(string path)
         {
             try
@@ -61,7 +65,6 @@ namespace FireSharp
                 throw new FirebaseException(ex);
             }
         }
-
         public FirebaseResponse<T> Get<T>(string path)
         {
             try
@@ -78,6 +81,25 @@ namespace FireSharp
             }
         }
 
+
+
+
+        public SetResponse Set(string path, object data = null, string jsonData = null)
+        {
+            try
+            {
+                HttpResponseMessage response = jsonData != null ? 
+                    _requestManager.RequestAsync(jsonData, path, HttpMethod.Put).Result
+                    :  _requestManager.RequestAsync(HttpMethod.Put, path, data).Result;
+                string content = response.Content.ReadAsStringAsync().Result;
+                HandleIfErrorResponse(response.StatusCode, content);
+                return new SetResponse(this.Serializer, content, response.StatusCode);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
         public SetResponse<T> Set<T>(string path, T data)
         {
             try
@@ -93,6 +115,42 @@ namespace FireSharp
             }
         }
 
+
+        public FirebaseResponse ApplyJsonPatch(string objectPath, JsonPatch patch)
+        {
+            var path = objectPath + patch.Path;
+            if (patch.Operation == JsonPatchOperation.Replace)
+            {
+                return Set(path, jsonData: patch.Data);
+            }
+            else if (patch.Operation == JsonPatchOperation.Add)
+            {
+                return Update(path, jsonData: patch.Data);
+            }
+            else if (patch.Operation == JsonPatchOperation.Remove)
+            {
+                return Delete(path);
+            }
+            else throw new NotImplementedException(string.Format("Json patch operation '{0}'", patch.Op));
+        }
+
+
+        public PushResponse Push(string path, object data = null, string jsonData = null)
+        {
+            try
+            {
+                HttpResponseMessage response = jsonData != null ?
+                    _requestManager.RequestAsync(jsonData, path, HttpMethod.Post).Result
+                    : _requestManager.RequestAsync(HttpMethod.Post, path, data).Result;
+                string content = response.Content.ReadAsStringAsync().Result;
+                HandleIfErrorResponse(response.StatusCode, content);
+                return new PushResponse(this.Serializer, content, response.StatusCode);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
         public PushResponse Push<T>(string path, T data)
         {
             try
@@ -107,20 +165,8 @@ namespace FireSharp
                 throw new FirebaseException(ex);
             }
         }
-        public PushResponse Push(string path, object data)
-        {
-            try
-            {
-                HttpResponseMessage response = _requestManager.RequestAsync(HttpMethod.Post, path, data).Result;
-                string content = response.Content.ReadAsStringAsync().Result;
-                HandleIfErrorResponse(response.StatusCode, content);
-                return new PushResponse(this.Serializer, content, response.StatusCode);
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new FirebaseException(ex);
-            }
-        }
+
+
 
         public FirebaseResponse Delete(string path)
         {
@@ -137,13 +183,26 @@ namespace FireSharp
             }
         }
 
-        /// <summary>
-        /// Sends an update request to Firebase
-        /// </summary>
-        /// <typeparam name="T">The type of the object to update</typeparam>
-        /// <param name="path">The Firebase path to the object to update.</param>
-        /// <param name="data">The patch to apply to the object.</param>
-        /// <returns></returns>
+
+
+
+
+        public FirebaseResponse Update(string path, object data = null, string jsonData = null)
+        {
+            try
+            {
+                HttpResponseMessage response = jsonData != null ?
+                    _requestManager.RequestAsync(jsonData, path, RequestManager.Patch).Result
+                    : _requestManager.RequestAsync(RequestManager.Patch, path, data).Result;
+                string content = response.Content.ReadAsStringAsync().Result;
+                HandleIfErrorResponse(response.StatusCode, content);
+                return new FirebaseResponse(this.Serializer, content, response.StatusCode);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
         public FirebaseResponse<T> Update<T>(string path, T data)
         {
             try
@@ -159,6 +218,9 @@ namespace FireSharp
             }
         }
 
+
+
+
         public async Task<FirebaseResponse> GetAsync(string path)
         {
             try
@@ -173,8 +235,6 @@ namespace FireSharp
                 throw new FirebaseException(ex);
             }
         }
-
-
         public async Task<FirebaseResponse<T>> GetAsync<T>(string path)
         {
             try
@@ -190,6 +250,42 @@ namespace FireSharp
             }
         }
 
+
+        public async Task<FirebaseResponse> ApplyJsonPatchAsync(string objectPath, JsonPatch patch)
+        {
+            var path = objectPath + patch.Path;
+            if (patch.Operation == JsonPatchOperation.Replace)
+            {
+                return await SetAsync(path, jsonData: patch.Data);
+            }
+            else if (patch.Operation == JsonPatchOperation.Add)
+            {
+                return await UpdateAsync(path, jsonData: patch.Data);
+            }
+            else if (patch.Operation == JsonPatchOperation.Remove)
+            {
+                return await DeleteAsync(path);
+            }
+            else throw new NotImplementedException(string.Format("Json patch operation '{0}'", patch.Op));
+        }
+
+
+        public async Task<SetResponse> SetAsync(string path, object data = null, string jsonData = null)
+        {
+            try
+            {
+                HttpResponseMessage response = jsonData != null ?
+                    await _requestManager.RequestAsync(jsonData, path, HttpMethod.Put).ConfigureAwait(false)
+                    : await _requestManager.RequestAsync(HttpMethod.Put, path, data).ConfigureAwait(false);
+                string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                HandleIfErrorResponse(response.StatusCode, content);
+                return new SetResponse(this.Serializer, content, response.StatusCode);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
         public async Task<SetResponse<T>> SetAsync<T>(string path, T data)
         {
             try
@@ -205,6 +301,25 @@ namespace FireSharp
             }
         }
 
+
+
+
+        public async Task<PushResponse> PushAsync(string path, object data = null, string jsonData = null)
+        {
+            try
+            {
+                HttpResponseMessage response = jsonData != null ?
+                    await _requestManager.RequestAsync(jsonData, path, HttpMethod.Post).ConfigureAwait(false)
+                    : await _requestManager.RequestAsync(HttpMethod.Post, path, data).ConfigureAwait(false);
+                string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                HandleIfErrorResponse(response.StatusCode, content);
+                return new PushResponse(this.Serializer, content, response.StatusCode);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
         public async Task<PushResponse> PushAsync<T>(string path, T data)
         {
             try
@@ -221,20 +336,7 @@ namespace FireSharp
         }
 
 
-        public async Task<PushResponse> PushAsync(string path, object data)
-        {
-            try
-            {
-                HttpResponseMessage response = await _requestManager.RequestAsync(HttpMethod.Post, path, data).ConfigureAwait(false);
-                string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                HandleIfErrorResponse(response.StatusCode, content);
-                return new PushResponse(this.Serializer, content, response.StatusCode);
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new FirebaseException(ex);
-            }
-        }
+
 
         public async Task<FirebaseResponse> DeleteAsync(string path)
         {
@@ -251,6 +353,25 @@ namespace FireSharp
             }
         }
 
+
+
+
+        public async Task<FirebaseResponse> UpdateAsync(string path, object data = null, string jsonData = null)
+        {
+            try
+            {
+                HttpResponseMessage response = jsonData != null ?
+                    await _requestManager.RequestAsync(jsonData, path, RequestManager.Patch).ConfigureAwait(false)
+                    : await _requestManager.RequestAsync(RequestManager.Patch, path, data).ConfigureAwait(false);
+                string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                HandleIfErrorResponse(response.StatusCode, content);
+                return new FirebaseResponse(this.Serializer, content, response.StatusCode);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new FirebaseException(ex);
+            }
+        }
         public async Task<FirebaseResponse<T>> UpdateAsync<T>(string path, T data)
         {
             try
@@ -266,10 +387,15 @@ namespace FireSharp
             }
         }
 
+
+
+
         public async Task<EventRootResponse<T>> OnChangeGetAsync<T>(string path, ValueChangedEventHandler<T> changed)
         {
             return new EventRootResponse<T>(await _requestManager.ListenAsync(path).ConfigureAwait(false), changed, this, _requestManager, path);
         }
+
+
 
 
         public async Task<EventStreamResponse<T>> OnAsync<T>(string path,
@@ -288,6 +414,8 @@ namespace FireSharp
                 eventStreaming);
         }
 
+
+
         private void HandleIfErrorResponse(HttpStatusCode statusCode, string content, Action<HttpStatusCode, string> errorHandler = null)
         {
             if (errorHandler != null)
@@ -299,5 +427,9 @@ namespace FireSharp
                 _defaultErrorHandler(statusCode, content);
             }
         }
+
+
+
+
     }
 }

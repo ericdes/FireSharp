@@ -49,12 +49,11 @@ namespace FireSharp
             return response;
         }
 
-        public Task<HttpResponseMessage> RequestAsync<T>(HttpMethod method, string path, T payload)
+        public Task<HttpResponseMessage> RequestAsync(string jsonData, string path, HttpMethod method)
         {
             try
             {
-                var request = PrepareRequest<T>(method, path, payload);
-
+                var request = PrepareRequest(jsonData, path, method);
                 return GetClient().SendAsync(request, HttpCompletionOption.ResponseContentRead);
             }
             catch (Exception ex)
@@ -63,13 +62,11 @@ namespace FireSharp
                     string.Format("An error occured while execute request. Path : {0} , Method : {1}", path, method), ex);
             }
         }
-
         public Task<HttpResponseMessage> RequestAsync(HttpMethod method, string path, object payload = null)
         {
             try
             {
                 var request = PrepareRequest(method, path, payload);
-
                 return GetClient().SendAsync(request, HttpCompletionOption.ResponseContentRead);
             }
             catch (Exception ex)
@@ -78,6 +75,20 @@ namespace FireSharp
                     string.Format("An error occured while execute request. Path : {0} , Method : {1}", path, method), ex);
             }
         }
+        public Task<HttpResponseMessage> RequestAsync<T>(HttpMethod method, string path, T payload)
+        {
+            try
+            {
+                var request = PrepareRequest<T>(method, path, payload);
+                return GetClient().SendAsync(request, HttpCompletionOption.ResponseContentRead);
+            }
+            catch (Exception ex)
+            {
+                throw new FirebaseException(
+                    string.Format("An error occured while execute request. Path : {0} , Method : {1}", path, method), ex);
+            }
+        }
+
 
         private HttpClient PrepareEventStreamRequest(string path, out HttpRequestMessage request)
         {
@@ -90,35 +101,38 @@ namespace FireSharp
             return client;
         }
 
+
+        private HttpRequestMessage PrepareRequest(string jsonData, string path, HttpMethod method)
+        {
+            var uri = PrepareUri(path);
+            var request = new HttpRequestMessage(method, uri);
+            if (jsonData != null)
+            {
+                request.Content = new StringContent(jsonData);
+            }
+            return request;
+        }
         private HttpRequestMessage PrepareRequest(HttpMethod method, string path, object payload)
         {
-            var uri = PrepareUri(path);
-
-            var request = new HttpRequestMessage(method, uri);
-
+            string json = null;
             if (payload != null)
             {
-                var json = _config.Serializer.Serialize(payload);
-                request.Content = new StringContent(json);
+                json = _config.Serializer.Serialize(payload);
             }
-
+            var request = PrepareRequest(json, path, method);
             return request;
         }
-
         private HttpRequestMessage PrepareRequest<T>(HttpMethod method, string path, T payload)
         {
-            var uri = PrepareUri(path);
-
-            var request = new HttpRequestMessage(method, uri);
-
+            string json = null;
             if (payload != null)
             {
-                var json = _config.Serializer.Serialize<T>(payload);
-                request.Content = new StringContent(json);
+                json = _config.Serializer.Serialize<T>(payload);
             }
-
+            var request = PrepareRequest(json, path, method);
             return request;
         }
+
 
         private Uri PrepareUri(string path)
         {

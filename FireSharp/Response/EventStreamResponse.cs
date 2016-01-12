@@ -222,7 +222,7 @@ namespace FireSharp.Response
                                             #region ----- Deal with object patched
                                             if (OnObjectPatched != null)
                                             {
-                                                var jsonPatch = _jsonPatchManager.BuildJsonPatch(response);
+                                                var jsonPatch = _jsonPatchManager.GeneratePatchFrom(response);
                                                 OnObjectPatched(this, jsonPatch);
                                             }
                                             #endregion

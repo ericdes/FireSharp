@@ -36,20 +36,6 @@ namespace FireSharp
 
         private SetMethod _setMethod;
 
-        private object _value;
-        /// <summary>
-        /// Value.
-        /// </summary>         
-        [JsonProperty("data")]
-        public object Value
-        {
-            // No getter necessary, or we have to go with _serializer.
-            set
-            {
-                _value = value;
-                _setMethod = _setMethod | SetMethod.Value;
-            }
-        }
 
         private JToken _dataToken;
         /// <summary>
@@ -112,6 +98,7 @@ namespace FireSharp
         [JsonIgnore]
         public JsonPatchOperation Operation { get; private set; }
 
+        #region --- op / path / data fields => JSON patch
         [JsonProperty("op")]
         public string Op
         {
@@ -148,6 +135,30 @@ namespace FireSharp
         }
 
 
+        private object _value;
+        /// <summary>
+        /// Value.
+        /// </summary>         
+        [JsonProperty("data")]
+        public object Value
+        {
+            // No public getter necessary, or we'd have to go with _serializer.
+            private get
+            {
+                // Only for the purpose debugging with nice indentified JSON returned by ToString().
+                if (_setMethod.HasFlag(SetMethod.Value)) return _value;
+                _value = JsonConvert.DeserializeObject(this.Data);
+                _setMethod = _setMethod | SetMethod.Value;
+                return _value;
+            }
+            set
+            {
+                _value = value;
+                _setMethod = _setMethod | SetMethod.Value;
+            }
+        }
+        #endregion
+
         /// <summary>
         /// Better use JsonPatchManager for convenience.
         /// </summary>
@@ -181,6 +192,10 @@ namespace FireSharp
             this.Operation = operation;
             this.Path = path;
             _setMethod = SetMethod.None;
+            if (operation == JsonPatchOperation.Remove)
+            {
+                this.Data = "null";
+            }
         }
 
         public static string FormatPath(string path)
@@ -190,14 +205,10 @@ namespace FireSharp
             return "/" + clean;
         }
 
-        public string ToJson()
-        {
-            return JsonConvert.SerializeObject(this);
-        }
 
         public override string ToString()
         {
-            return ToJson();
+            return JsonConvert.SerializeObject(this);
         }
 
 

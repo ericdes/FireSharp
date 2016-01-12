@@ -71,7 +71,7 @@ namespace FireSharp
             }
             else if (endRecursion && target.Type == PathedObjectType.Root)
             {
-                if (patch.Data == null || patch.Operation == JsonPatchOperation.Remove)
+                if (patch.Data == null || patch.Data == "null" || patch.Operation == JsonPatchOperation.Remove)
                 {
                     value = null;
                 }
@@ -90,7 +90,7 @@ namespace FireSharp
             else if (endRecursion && target.Type == PathedObjectType.Property)
             {
                 var currentPropertyValue = targetProperty.GetValue(value);
-                if (patch.Data == null || patch.Operation == JsonPatchOperation.Remove)
+                if (patch.Data == null || patch.Data == "null" || patch.Operation == JsonPatchOperation.Remove)
                 {
                     targetProperty.SetValue(value, null);
                 }
@@ -160,7 +160,7 @@ namespace FireSharp
                 //(value as IDictionary).Add(newKeyValue as Key);
 
                 string jsonNewDictionary;
-                if (patch.Data == null)
+                if (patch.Data == null || patch.Data == "null" || patch.Operation == JsonPatchOperation.Remove)
                 {
                     jsonNewDictionary = "{" + string.Format("\"{0}\":{1}", target.Name, "null") + "}";
                 }
@@ -185,7 +185,9 @@ namespace FireSharp
                 {
                     throw new InvalidOperationException("Expecting only 1 keyvalue pair.");
                 }
-                if (patch.Operation == JsonPatchOperation.Add || patch.Operation == JsonPatchOperation.Replace)
+                if (patch.Operation == JsonPatchOperation.Add 
+                    || patch.Operation == JsonPatchOperation.Replace
+                    || patch.Operation == JsonPatchOperation.Remove)
                 {
                     // It would be an error for a replace operation here to replace the full dictionary:
                     // indeed, the replacement is only intended for the dictionary item.

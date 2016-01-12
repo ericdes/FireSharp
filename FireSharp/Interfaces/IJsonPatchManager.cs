@@ -15,5 +15,8 @@ namespace FireSharp.Interfaces
         /// <param name="jsonPatch">JSON patch following RFC 6902 standard.</param>
         /// <see cref="https://tools.ietf.org/html/rfc6902"/>
         void Patch<T>(T target, JsonPatch patch);
+
+        JsonPatch GeneratePatchFrom(IEventStreamingResponse eventStreamingResponse);
+        JsonPatch GeneratePatchFrom(object newValue, string valuePath);
     }
 }

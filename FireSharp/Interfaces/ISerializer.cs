@@ -20,11 +20,5 @@ namespace FireSharp.Interfaces
         /// </summary>  
         string Serialize<T>(T value);
 
-        ///// <summary>
-        ///// JSON patch method. The target object in paramater gets patched against the JSON patch.
-        ///// </summary>
-        ///// <typeparam name="T">Type of target object to patch</typeparam>
-        //void Patch<T>(T target, IJsonPatch jsonPatch);
-
     }
 }
