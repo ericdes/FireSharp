@@ -58,7 +58,7 @@
     <Compile Include="Interfaces\IJsonPatchManager.cs" />
     <Compile Include="Interfaces\IRequestManager.cs" />
     <Compile Include="Interfaces\ISerializer.cs" />
-    <Compile Include="Patching\JsonPatchManager.cs" />
+    <Compile Include="Patching\JsonPatcher.cs" />
     <Compile Include="Patching\JsonPatch.cs" />
     <Compile Include="Patching\Patch.cs" />
     <Compile Include="Patching\PathedObjectInfo.cs" />

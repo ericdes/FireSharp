@@ -8,7 +8,7 @@ namespace FireSharp.Interfaces
     public interface IFirebaseClient
     {
         ISerializer Serializer { get; }
-        JsonPatchManager JsonPatchManager { get; }
+        JsonPatcher JsonPatcher { get; }
 
         /// <summary>
         /// Apply a JSON patch to a firebase object
@@ -26,7 +26,7 @@ namespace FireSharp.Interfaces
         /// <returns></returns>
         Task<FirebaseResponse> ApplyJsonPatchAsync(string objectPath, JsonPatch patch);
 
-        FirebaseResponse Get(string path);
+        FirebaseResponse Get(string path, Action<Exception, string> exceptionHandler = null);
         FirebaseResponse<T> Get<T>(string path);
         Task<FirebaseResponse> GetAsync(string path);
         Task<FirebaseResponse<T>> GetAsync<T>(string path);
@@ -52,11 +52,12 @@ namespace FireSharp.Interfaces
         Task<FirebaseResponse<T>> UpdateAsync<T>(string path, T data);
 
         Task<EventStreamResponse<T>> OnAsync<T>(string path,
-            ObjectCreatedEventHandler<T> objectCreated = null,
-            ObjectPatchedEventHandler<T> objectPatched = null,
+            ObjectRootPatchReceivedEventHandler<T> objectCreated = null,
+            ObjectPropertyPatchReceivedEventHandler<T> objectPatched = null,
             EventStreamingResponseEventHandler<T> eventStreamingResponse = null,
             EventStreamingResponseRawEventHandler<T> eventStreamingResponseRaw = null,
-            EventStreamingEventHandler<T> eventStreaming = null);
+            EventStreamingEventHandler<T> eventStreaming = null,
+            Action<Exception> exceptionHandler = null);
 
     }
 }

@@ -14,7 +14,7 @@ namespace FireSharp.Interfaces
         /// <typeparam name="T">Type of target object to patch</typeparam>
         /// <param name="jsonPatch">JSON patch following RFC 6902 standard.</param>
         /// <see cref="https://tools.ietf.org/html/rfc6902"/>
-        void Patch<T>(T target, JsonPatch patch);
+        void ExecuteOn<T>(T target, JsonPatch patch);
 
         JsonPatch GeneratePatchFrom(IEventStreamingResponse eventStreamingResponse);
         JsonPatch GeneratePatchFrom(object newValue, string valuePath);

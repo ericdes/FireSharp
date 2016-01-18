@@ -72,19 +72,19 @@ namespace FireSharp
             get
             {
                 if (_setMethod.HasFlag(SetMethod.Json)) return _data;
-                if (_setMethod.HasFlag(SetMethod.Token))
-                {
-                    _data = _dataToken.ToString(Formatting.None);
-                }
-                else if (_setMethod.HasFlag(SetMethod.Value))
-                {
+                //if (_setMethod.HasFlag(SetMethod.Token))
+                //{
+                //    _data = _dataToken.ToString(Formatting.None);
+                //}
+                //else if (_setMethod.HasFlag(SetMethod.Value))
+                //{
                     if (_serializer == null)
                     {
                         throw new ArgumentException("Static serializer in JsonPatch has not been set.");
                     }
                     _data = _serializer.Serialize(_value);
-                }
-                else return null;
+                //}
+                //else return null;
                 _setMethod = _setMethod | SetMethod.Json;
                 return _data;
             }

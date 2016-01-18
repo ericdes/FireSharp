@@ -7,13 +7,14 @@ using FireSharp.EventStreaming;
 using FireSharp.Exceptions;
 using FireSharp.Interfaces;
 using FireSharp.Response;
+using System.IO;
 
 namespace FireSharp
 {
     public partial class FirebaseClient : IFirebaseClient, IDisposable
     {
         public ISerializer Serializer { get; private set; }
-        public JsonPatchManager JsonPatchManager { get; private set; }
+        public JsonPatcher JsonPatcher { get; private set; }
         private readonly IRequestManager _requestManager;
 
         private readonly Action<HttpStatusCode, string> _defaultErrorHandler = (statusCode, body) =>
@@ -29,7 +30,7 @@ namespace FireSharp
         public FirebaseClient(IFirebaseConfig config)
         {
             this.Serializer = config.Serializer;
-            this.JsonPatchManager = new JsonPatchManager(this.Serializer);
+            this.JsonPatcher = new JsonPatcher(this.Serializer);
             _requestManager = new RequestManager(config);
         }
 
@@ -51,19 +52,22 @@ namespace FireSharp
 
 
 
-        public FirebaseResponse Get(string path)
+        public FirebaseResponse Get(string path, Action<Exception, string> exceptionHandler = null)
         {
+            FirebaseResponse firebaseResponse = null;
             try
             {
                 HttpResponseMessage response = _requestManager.RequestAsync(HttpMethod.Get, path).Result;
                 string content = response.Content.ReadAsStringAsync().Result;
                 HandleIfErrorResponse(response.StatusCode, content);
-                return new FirebaseResponse(this.Serializer, content, response.StatusCode);
+                firebaseResponse = new FirebaseResponse(this.Serializer, content, response.StatusCode);
             }
-            catch (HttpRequestException ex)
+            catch (HttpRequestException e)
             {
-                throw new FirebaseException(ex);
+                if (exceptionHandler == null) throw new FirebaseException(e);
+                exceptionHandler(new FirebaseException(e), "HttpRequest error");
             }
+            return firebaseResponse;
         }
         public FirebaseResponse<T> Get<T>(string path)
         {
@@ -253,7 +257,8 @@ namespace FireSharp
 
         public async Task<FirebaseResponse> ApplyJsonPatchAsync(string objectPath, JsonPatch patch)
         {
-            var path = objectPath + patch.Path;
+            
+            var path = "/" + objectPath.Trim(new[] { '/' }) + patch.Path;
             if (patch.Operation == JsonPatchOperation.Replace)
             {
                 return await SetAsync(path, jsonData: patch.Data);
@@ -399,19 +404,30 @@ namespace FireSharp
 
 
         public async Task<EventStreamResponse<T>> OnAsync<T>(string path,
-            ObjectCreatedEventHandler<T> objectCreated = null,
-            ObjectPatchedEventHandler<T> objectPatched = null,
+            ObjectRootPatchReceivedEventHandler<T> objectRootPatchReceived = null,
+            ObjectPropertyPatchReceivedEventHandler<T> objectPropertyPatchReceived = null,
             EventStreamingResponseEventHandler<T> eventStreamingResponse = null,
             EventStreamingResponseRawEventHandler<T> eventStreamingResponseRaw = null,
-            EventStreamingEventHandler<T> eventStreaming = null)
+            EventStreamingEventHandler<T> eventStreaming = null,
+            Action<Exception> exceptionHandler = null)
         {
-            return new EventStreamResponse<T>(this.Serializer,
-                await _requestManager.ListenAsync(path).ConfigureAwait(false), 
-                objectCreated,
-                objectPatched,
-                eventStreamingResponse, 
-                eventStreamingResponseRaw, 
-                eventStreaming);
+            try
+            {
+                return new EventStreamResponse<T>(this.Serializer,
+                    await _requestManager.ListenAsync(path).ConfigureAwait(false),
+                    objectRootPatchReceived,
+                    objectPropertyPatchReceived,
+                    eventStreamingResponse,
+                    eventStreamingResponseRaw,
+                    eventStreaming,
+                    exceptionHandler);
+            }
+            catch(Exception e)
+            {
+                if (exceptionHandler == null) throw new FirebaseException("Failed to establish OnAsync observer", e);
+                exceptionHandler(e);
+            }
+            return null;
         }
 
 

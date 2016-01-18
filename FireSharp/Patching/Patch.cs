@@ -16,18 +16,52 @@ using FireSharp.Exceptions;
 
 namespace FireSharp
 {
-    public partial class JsonPatchManager
+    public partial class JsonPatcher
     {
         /// <summary>
         /// JSON patch method. The object in paramater gets patched against the JSON patch.
         /// </summary>
         /// <typeparam name="T">Type of target object to patch</typeparam>
         /// <see cref="https://tools.ietf.org/html/rfc6902"/>
-        public void Patch<T>(T target, JsonPatch jsonPatch)
+        public void ExecuteOn<T>(T target, JsonPatch jsonPatch)
         {
             var segments = jsonPatch.Path.Trim(new[] { '/' }).Split(new[] { '/' });
 
-            InternalPatchRecursive(segments, jsonPatch, target, typeof(T));
+            if (segments.Length == 1 && segments[0] == "")
+            {
+                InternalPatchRoot<T>(target, jsonPatch);
+            }
+            else
+            {
+                InternalPatchRecursive(segments, jsonPatch, target, typeof(T));
+            }
+        }
+
+        public void InternalPatchRoot<T>(T target, JsonPatch patch)
+        {
+            foreach(var token in patch.DataToken.Children()) // list of first-level properties
+            {
+                var propertyName = token.Path;
+                var propertyInfo = typeof(T).GetProperty(propertyName);
+                var propertyToken = token.First();
+                object propertyNewValue;
+                try
+                {
+                    propertyNewValue = _serializer.Deserialize(propertyToken.ToString(), propertyInfo.PropertyType);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException(string.Format("InternalPatchRoot failed to deserialize property '{0}'.", propertyName), e);
+                }
+                try
+                {
+                    propertyInfo.SetValue(target, propertyNewValue);
+                }
+                catch(Exception e)
+                {
+                    throw new InvalidOperationException(string.Format("InternalPatchRoot failed to set value of property '{0}' to target.", propertyName), e);
+                }
+            }
         }
 
         private void InternalPatchRecursive(string[] pathSegments, JsonPatch patch, object value, Type valueType, int startingPathIndex = 0)

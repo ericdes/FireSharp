@@ -55,46 +55,50 @@ namespace FireSharp.Response
     }
 
 
-    public class EventStreamResponse<T> : IEventStreamResponse<T>
+    public class EventStreamResponse<T> : IEventStreamObserver<T>
     {
         private static bool EXTRA_DEBUG = false;
         private readonly ISerializer _serializer;
-        private readonly JsonPatchManager _jsonPatchManager;
+        private readonly JsonPatcher _jsonPatchManager;
         private readonly FireCache _fireCache;
         private readonly TemporaryCache _cache;
-        private readonly CancellationTokenSource _cancel;
         private readonly Task _pollingTask;
+
+        public CancellationTokenSource CancellationToken { get; private set; }
 
         #region Events
         public event EventStreamingEventHandler<T> OnEventStreaming;
         public event EventStreamingResponseRawEventHandler<T> OnEventStreamingResponseRaw;
         public event EventStreamingResponseEventHandler<T> OnEventStreamingResponse;
-        public event ObjectPatchedEventHandler<T> OnObjectPatched;
-        public event ObjectCreatedEventHandler<T> OnObjectCreated;
+        public event ObjectPropertyPatchReceivedEventHandler<T> OnObjectPropertyPatchReceived;
+        public event ObjectRootPatchReceivedEventHandler<T> OnObjectRootPatchReceived;
+        public Action<Exception> ExceptionHandler { get; private set; }
         #endregion
 
 
         internal EventStreamResponse(ISerializer serializer, HttpResponseMessage httpResponse,
-            ObjectCreatedEventHandler<T> objectCreated = null,
-            ObjectPatchedEventHandler<T> objectPatched = null,
+            ObjectRootPatchReceivedEventHandler<T> rootPatchReceived = null,
+            ObjectPropertyPatchReceivedEventHandler<T> propertyPatchReceived = null,
             EventStreamingResponseEventHandler<T> eventStreamingResponse = null,
             EventStreamingResponseRawEventHandler<T> eventStreamingResponseRaw = null,
-            EventStreamingEventHandler<T> eventStreaming = null)
+            EventStreamingEventHandler<T> eventStreaming = null,
+            Action<Exception> exceptionHandler = null)
         {
             _serializer = serializer;
-            _cancel = new CancellationTokenSource();
-
             _fireCache = new FireCache();
             _cache = new TemporaryCache();
 
-            if (objectCreated != null)
+            this.CancellationToken = new CancellationTokenSource();
+            this.ExceptionHandler = exceptionHandler;
+
+            if (rootPatchReceived != null)
             {
-                this.OnObjectCreated += objectCreated;
+                this.OnObjectRootPatchReceived += rootPatchReceived;
             }
-            if (objectPatched != null)
+            if (propertyPatchReceived != null)
             {
-                this.OnObjectPatched += objectPatched;
-                _jsonPatchManager = new JsonPatchManager(_serializer);
+                this.OnObjectPropertyPatchReceived += propertyPatchReceived;
+                _jsonPatchManager = new JsonPatcher(_serializer);
             }
             if (eventStreamingResponse != null)
             {
@@ -108,7 +112,7 @@ namespace FireSharp.Response
             {
                 this.OnEventStreaming += eventStreaming;
             }
-            _pollingTask = ReadLoop(httpResponse, _cancel.Token);
+            _pollingTask = ReadLoop(httpResponse, CancellationToken.Token);
         }
 
 
@@ -124,10 +128,11 @@ namespace FireSharp.Response
                         {
                             using (var sr = new StreamReader(content))
                             {
+                                bool? isFirstTimeRetrieval = null;
                                 #region ----- While true -----
                                 while (true)
                                 {
-                                    _cancel.Token.ThrowIfCancellationRequested();
+                                    CancellationToken.Token.ThrowIfCancellationRequested();
 
                                     string line;
                                     #region ----- Read line
@@ -166,8 +171,8 @@ namespace FireSharp.Response
                                         if (dataLine.StartsWith("data: "))
                                         {
                                             if (OnEventStreamingResponse == null
-                                                && OnObjectCreated == null
-                                                && OnObjectPatched == null) return; // Not watching
+                                                && OnObjectRootPatchReceived == null
+                                                && OnObjectPropertyPatchReceived == null) return; // Not watching
 
                                             #region ----- Read path / data
                                             var dataRecord = dataLine.Substring(6);
@@ -207,23 +212,26 @@ namespace FireSharp.Response
                                             }
                                             #endregion
 
-                                            #region ----- Deal with object created
-                                            if (OnObjectCreated != null)
+                                            #region ----- Deal with object data received
+                                            var jsonPatch = _jsonPatchManager.GeneratePatchFrom(response);
+                                            if (responseData.Path == "/" && eventName == "put")
+                                            {
+                                                isFirstTimeRetrieval = isFirstTimeRetrieval == null ? true : false;
+                                                if (OnObjectRootPatchReceived != null)
                                                 {
-                                                if (responseData.Path == "/" && eventName == "put")
-                                                {
-                                                    var obj = responseData.DataToken.ToObject<T>();
-                                                    //var obj = _serializer.Deserialize<T>(responseData.Data);
-                                                    OnObjectCreated(this, obj);
+                                                    // var obj = _serializer.Deserialize<T>(responseData.Data);
+                                                    OnObjectRootPatchReceived(this, jsonPatch, isFirstTimeRetrieval.Value);
                                                 }
                                             }
-                                            #endregion
-
-                                            #region ----- Deal with object patched
-                                            if (OnObjectPatched != null)
+                                            else if (OnObjectPropertyPatchReceived != null)
                                             {
-                                                var jsonPatch = _jsonPatchManager.GeneratePatchFrom(response);
-                                                OnObjectPatched(this, jsonPatch);
+                                                if (isFirstTimeRetrieval == null)
+                                                {
+                                                    var message = "Firebase streaming did not emit first time retrieval of object.";
+                                                    Debug.WriteLine("[StreamingResponse.##### WARNING #####] " + message);
+                                                    throw new FirebaseEventStreamingException(eventName, dataRecord, message);
+                                                }
+                                                OnObjectPropertyPatchReceived(this, jsonPatch);
                                             }
                                             #endregion
                                         }
@@ -242,14 +250,15 @@ namespace FireSharp.Response
             }
             catch(Exception exceptionInLongRunningTask)
             {
-                throw;
+                if (this.ExceptionHandler == null) throw;
+                this.ExceptionHandler(exceptionInLongRunningTask);
             }
         }
 
 
         public async void Cancel()
         {
-            _cancel.Cancel();
+            CancellationToken.Cancel();
             Debug.WriteLine("[StreamingResponse.Warning] Loop stopped.");
         }
 
@@ -257,7 +266,7 @@ namespace FireSharp.Response
         public void Dispose()
         {
             Cancel();
-            using (_cancel) // Dispose _cancel
+            using (CancellationToken) // Dispose _cancel
             {
             }
         }

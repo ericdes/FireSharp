@@ -67,7 +67,8 @@ namespace FireSharp
             try
             {
                 var request = PrepareRequest(method, path, payload);
-                return GetClient().SendAsync(request, HttpCompletionOption.ResponseContentRead);
+                var httpResponse = GetClient().SendAsync(request, HttpCompletionOption.ResponseContentRead);
+                return httpResponse;
             }
             catch (Exception ex)
             {
@@ -137,11 +138,10 @@ namespace FireSharp
         private Uri PrepareUri(string path)
         {
             var authToken = !string.IsNullOrWhiteSpace(_config.AuthSecret)
-                ? string.Format("{0}.json?auth={1}", path, _config.AuthSecret)
+                ? string.Format("{0}.json?auth={1}", path.Trim(new[] { '/' }), _config.AuthSecret)
                 : string.Format("{0}.json", path);
 
-            var basePath = _config.BasePath.EndsWith("/") ? _config.BasePath : _config.BasePath + "/";
-            var url = string.Format("{0}{1}", basePath, authToken);
+            var url = _config.BasePath.TrimEnd(new[] { '/' }) + "/" + authToken;
 
             return new Uri(url);
         }

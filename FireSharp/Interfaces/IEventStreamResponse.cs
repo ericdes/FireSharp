@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 
 using FireSharp.EventStreaming;
+using System.Threading;
 
 namespace FireSharp.Interfaces
 {
@@ -15,9 +16,14 @@ namespace FireSharp.Interfaces
         string Data { get; }
     }
 
-    public interface IEventStreamResponse<T>
+    public interface IEventStreamObserver
     {
-        event ObjectPatchedEventHandler<T> OnObjectPatched;
+        CancellationTokenSource CancellationToken { get; }
+        Action<Exception> ExceptionHandler { get; }
+    }
+    public interface IEventStreamObserver<T> : IEventStreamObserver
+    {
+        event ObjectPropertyPatchReceivedEventHandler<T> OnObjectPropertyPatchReceived;
     }
 
     public interface IEventStreamingResponse
