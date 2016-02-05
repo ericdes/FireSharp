@@ -52,12 +52,13 @@ namespace FireSharp.Interfaces
         Task<FirebaseResponse<T>> UpdateAsync<T>(string path, T data);
 
         Task<EventStreamResponse<T>> OnAsync<T>(string path,
-            ObjectRootPatchReceivedEventHandler<T> objectCreated = null,
-            ObjectPropertyPatchReceivedEventHandler<T> objectPatched = null,
+            ObjectRootPatchReceivedEventHandler<T> objectRootPatchReceived = null,
+            ObjectPropertyPatchReceivedEventHandler<T> objectPropertyPatchReceived = null,
             EventStreamingResponseEventHandler<T> eventStreamingResponse = null,
             EventStreamingResponseRawEventHandler<T> eventStreamingResponseRaw = null,
             EventStreamingEventHandler<T> eventStreaming = null,
             Action<Exception> exceptionHandler = null);
+
 
     }
 }
